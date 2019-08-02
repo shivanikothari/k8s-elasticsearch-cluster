@@ -1,0 +1,139 @@
+#https://github.com/pires/kubernetes-elasticsearch-cluster/blob/master/es-ingest.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: es
+  name: elasticsearch-ingest
+  labels:
+    app: elasticsearch
+    role: ingest
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: elasticsearch
+      role: ingest
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+        role: ingest
+    spec:
+      affinity:
+        # Try to put each ES ingest node on a different node in the K8s cluster
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - elasticsearch
+                  - key: role
+                    operator: In
+                    values:
+                      - ingest
+                topologyKey: kubernetes.io/hostname
+      terminationGracePeriodSeconds: 300
+      # spec.template.spec.initContainers
+      initContainers:
+        - name: fix-the-volume-permission
+          image: busybox
+          command: ['sh', '-c', 'chown -R 1000:1000 /usr/share/elasticsearch/data']
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
+        # Increase the default vm.max_map_count to 262144
+        # https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html#docker-cli-run-prod-mode
+        - name: increase-the-vm-max-map-count
+          image: busybox
+          command: ['sysctl', '-w', 'vm.max_map_count=262144']
+          securityContext:
+            privileged: true
+        # Increase the ulimit
+        # https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html#_notes_for_production_use_and_defaults
+        - name: increase-the-ulimit
+          image: busybox
+          command: ['sh', '-c', 'ulimit -n 65536']
+          securityContext:
+            privileged: true
+      # spec.template.spec.containers
+      containers:
+        - name: elasticsearch
+          image: docker.elastic.co/elasticsearch/elasticsearch:7.0.0
+          ports:
+            - containerPort: 9200
+              name: http
+            - containerPort: 9300
+              name: transport
+          livenessProbe:
+            tcpSocket:
+              port: transport
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /_cluster/health
+              port: http
+            initialDelaySeconds: 20
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 1
+              memory: 10Gi
+            limits:
+              cpu: 1
+              memory: 10Gi
+          # spec.template.spec.containers[elasticsearch].env
+          env:
+            - name: discovery.seed_hosts
+              value: "elasticsearch-master.es.svc.cluster.local"
+            - name: ES_JAVA_OPTS
+              value: -Xms5g -Xmx5g
+            - name: node.master
+              value: "false"
+            - name: node.ingest
+              value: "true"
+            - name: node.data
+              value: "false"
+            - name: cluster.remote.connect
+              value: "true"
+            - name: cluster.name
+              value: es-cluster
+            - name: node.name
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          # spec.template.spec.containers[elasticsearch].volumeMounts
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
+            - name: config
+              mountPath: /usr/share/elasticsearch/jdk/lib/security/java.security
+              subPath: java.security
+      # spec.template.spec
+      volumes:
+        - name: config
+          configMap:
+            name: es-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: elasticsearch-ingest-claim
+      nodeSelector:
+        node: es
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  namespace: es
+  name: elasticsearch-ingest
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+      role: ingest
