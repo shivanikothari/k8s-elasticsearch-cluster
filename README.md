@@ -6,10 +6,10 @@ Deploy an elasticsearch cluster on kubernetes platform.
 As the name implies, an Elasticsearch cluster is a group of one or more Elasticsearch nodes instances that are connected together. The power of an Elasticsearch cluster lies in the distribution of tasks, searching and indexing, across all the nodes in the cluster.
 
 The nodes in the Elasticsearch cluster can be assigned different jobs or responsibilities:
-   Data nodes — stores data and executes data-related operations such as search and aggregation.    
-   Master nodes — in charge of cluster-wide management and configuration actions such as adding and removing nodes.  
-   Client nodes — forwards cluster requests to the master node and data-related requests to data nodes.  
-   Ingest nodes — for pre-processing documents before indexing.  
+* Data nodes: stores data and executes data-related operations such as search and aggregation.    
+* Master nodes: in charge of cluster-wide management and configuration actions such as adding and removing nodes.  
+* Client nodes: forwards cluster requests to the master node and data-related requests to data nodes.  
+* Ingest nodes: for pre-processing documents before indexing.  
 
 # Getting Started
 
