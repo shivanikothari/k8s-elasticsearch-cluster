@@ -1,0 +1,51 @@
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: data-elasticsearch-master-0
+  labels:
+    type: local
+    app: elasticsearch
+    role: master
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/u01/elastic_storage/master/0"
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: data-elasticsearch-master-1
+  labels:
+    type: local
+    app: elasticsearch
+    role: master
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/u01/elastic_storage/master/1"
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: data-elasticsearch-master-2
+  labels:
+    type: local
+    app: elasticsearch
+    role: master
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/u01/elastic_storage/master/2"
